@@ -1,0 +1,3 @@
+[submodule "stdl"]
+	path = stdl
+	url = https://github.com/neilrackett/atarist-stdl.git
