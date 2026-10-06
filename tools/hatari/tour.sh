@@ -17,6 +17,6 @@ for key in 0x04 0x05; do S="$S;$(k $key);sleep 3;shot;sleep 4;shot"; done
 S="$S;sleep 5;shot"
 for key in 0x06 0x07 0x08; do S="$S;$(k $key);sleep 3;shot;sleep 4;shot"; done
 S="$S;$(k 0x01);sleep 4"
-MACHINE=$M FF=off tmp/run.sh $NAME dist/MEGADEMO.TOS 6 "$S" 2>&1 | tr -d '\r' \
+MACHINE=$M FF=off tmp/run.sh $NAME ${PROG:-dist/MEGADEMO.TOS} 6 "$S" 2>&1 | tr -d '\r' \
     | sed -n '/console output/,/screenshots/p' | grep -v "^===\|^$"
 python3 tools/hatari/sheet.py tmp/out/shots_$NAME tmp/out/${NAME}_sheet.png 4 2>/dev/null

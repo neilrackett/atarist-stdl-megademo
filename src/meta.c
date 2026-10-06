@@ -282,8 +282,7 @@ static void frame(uint32_t f)
     rt = raster_buf();
     n = raster_n();
     for (i = 0; i < n; i++) {
-        rt[2 * i] = 0;
-        rt[2 * i + 1] = 0;
+        rt[i] = 0;                  /* colour 0 alone: a word an entry */
     }
     {
         int k;
@@ -292,7 +291,7 @@ static void frame(uint32_t f)
             for (d = -5; d <= 5; d++) {
                 int e = cy + d;
                 if (e >= 0 && e < n) {
-                    rt[2 * e] = cop_grad[k][d < 0 ? -d : d];
+                    rt[e] = cop_grad[k][d < 0 ? -d : d];
                 }
             }
         }

@@ -322,7 +322,7 @@ static void jump(int p)
     }
     cur = -1;
     pal_black();
-    sync_start(p);              /* disk: borders are closed by now */
+    sync_start(p);              /* a seek: no disk, no border to close */
     enter_part(p);
     last_flip = vbl_free;       /* the load is not a frame's cost   */
 }

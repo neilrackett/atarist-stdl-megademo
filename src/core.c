@@ -3,16 +3,17 @@
  * Copyright (C) 2026 Neil Rackett
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * One STDL_AddVBL callback does the three things that must happen in
- * the vertical blank: count the frame the music is on, write the
- * staged palette, and re-arm the Timer B rasters (raster.c) for the
- * picture that is about to start.
+ * One STDL_AddVBL callback does what must happen in the vertical
+ * blank: count VBLs (for frame pacing, and the clock when there is
+ * no music) and write the staged palette. The song clock is the
+ * music's own position; the rasters are STDL's (raster.c).
  */
 
 #include <stdio.h>
 #include <string.h>
 #include "demo.h"
 #include "dots.h"
+#include "gen/stm.h"
 
 volatile uint32_t vbl_ticks, vbl_free;
 static volatile uint8_t paused;
@@ -26,8 +27,6 @@ static volatile uint8_t pal_dirty;
 
 int fx_flash;
 int fx_fade = 256;
-
-void raster_vbl(void);              /* raster.c */
 
 static inline uint16_t irq_off(void)
 {
@@ -57,7 +56,6 @@ static void demo_vbl(void)
         }
         pal_dirty = 0;
     }
-    raster_vbl();
 }
 
 int core_init(void)
@@ -77,42 +75,44 @@ void core_quit(void)
 
 /* ------------------------------------------------------------ clock */
 
+/* the music's own position (STDL_MusicFrame: the next frame it will
+ * play, which is what the next flip shows); the VBL count only when
+ * there is no music */
 uint32_t sync_frame(void)
 {
-    uint32_t t = vbl_ticks;
-    return (base_frame + t) % SONG_FRAMES;
+    int fr = music != NULL ? STDL_MusicFrame() : -1;
+
+    if (fr >= 0) {
+        return (uint32_t)fr % SONG_FRAMES;
+    }
+    return (base_frame + vbl_ticks) % SONG_FRAMES;
 }
 
 /*
- * STDL_Music cannot seek, so every part has its own stream that
- * starts there and wraps round (tools/mksong.py writes them). Jumping
- * is a file load - done with the borders closed, since disk access
- * and an open border do not mix. A missing file is not fatal: the
- * clock runs on regardless and the demo plays silent.
+ * One song, linked into the program and played where it lies
+ * (STDL_MusicFromMemory); jumping to a part is a seek, so there is no
+ * file to load and nothing to keep in step but the music itself.
  */
 int sync_start(int part)
 {
-    char name[16];
     uint16_t sr;
-    int ok = 0;
 
-    STDL_HaltMusic();
-    if (music != NULL) {
-        STDL_FreeMusic(music);
-        music = NULL;
-    }
-    sprintf(name, "MEGA%d.STM", part);
-    music = STDL_LoadMusic(name);
     base_frame = (uint32_t)song_part_bar[part] * SONG_FPB;
+    if (music == NULL) {
+        music = STDL_MusicFromMemory(song_stm, SONG_STM_BYTES);
+        if (music != NULL) {
+            STDL_PlayMusic(music, -1);
+        }
+    }
     sr = irq_off();
     vbl_ticks = 0;
     paused = 0;
-    if (music != NULL) {
-        STDL_PlayMusic(music, -1);
-        ok = 1;
-    }
     irq_restore(sr);
-    return ok ? 0 : -1;
+    if (music == NULL) {
+        return -1;
+    }
+    STDL_ResumeMusic();
+    return STDL_SeekMusic((int)base_frame);
 }
 
 void sync_stop(void)
@@ -154,22 +154,14 @@ int sync_since(uint32_t f, uint16_t mask)
     return 9999;
 }
 
+/* the stream's registers as it last set them (STDL_GetMusicRegisters):
+ * no reading the chip, so no masking interrupts round a select */
 void ym_peek(uint8_t vol[3], uint16_t per[3], uint8_t *mixer)
 {
-    volatile uint8_t *ym = (volatile uint8_t *)0xffff8800UL;
-    uint8_t r[11];
-    uint16_t sr;
+    uint8_t r[14];
     int i;
 
-    /* select and read with interrupts off: the music tick selects
-     * registers from the VBL, and a read split by it reads the
-     * register the tick left selected */
-    sr = irq_off();
-    for (i = 0; i <= 10; i++) {
-        ym[0] = (uint8_t)i;
-        r[i] = ym[0];
-    }
-    irq_restore(sr);
+    STDL_GetMusicRegisters(r);
     for (i = 0; i < 3; i++) {
         per[i] = (uint16_t)(r[2 * i] | ((r[2 * i + 1] & 15) << 8));
         vol[i] = r[8 + i] & 0x1F;

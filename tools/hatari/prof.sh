@@ -14,12 +14,14 @@
 # work finishes inside.
 . "$(dirname "$0")/common.sh"
 NAME=$1; PART=$2; SECS=${3:-4}; M=${4:-st}
-cp build/megademo.elf dist/MEGADBG.TOS
+# ELF= profiles another build; DIR= is where its debug copy goes
+ELF=${ELF:-build/megademo.elf}; DIR=${DIR:-dist}
+cp "$ELF" "$DIR/MEGADBG.TOS"
 key=$(printf '0x%02x' $((PART + 1)))
-MACHINE=$M FF=off tmp/run.sh $NAME dist/MEGADBG.TOS 6 \
-  "waitfor title;sleep 1;$(k 0x39);sleep 2;$(k $key);sleep 2;fifo hatari-debug symbols prg;sleep 0.5;fifo hatari-debug profile on;sleep $SECS;fifo hatari-debug profile save $PWD/tmp/out/$NAME.prof;sleep 1;$(k 0x01);sleep 3" \
+MACHINE=$M FF=off tmp/run.sh $NAME "$DIR/MEGADBG.TOS" 6 \
+  "waitfor title;sleep 1;$(k 0x39);sleep 2;$(k $key);sleep ${WAIT:-2};fifo hatari-debug symbols prg;sleep 0.5;fifo hatari-debug profile on;sleep $SECS;fifo hatari-debug profile save $PWD/tmp/out/$NAME.prof;sleep 1;$(k 0x01);sleep 3" \
   > /dev/null 2>&1
-rm -f dist/MEGADBG.TOS
+rm -f "$DIR/MEGADBG.TOS"
 tr -d '\r' < tmp/out/$NAME.log | grep "fps"
 FR=$(grep -E "^0x[0-9a-f]+: .*_frame$" tmp/out/$NAME.prof | head -1 | sed -E 's/.*= ([0-9]+) s.*/\1/')
 python3 tools/hatari/profsum.py tmp/out/$NAME.prof ${TOP:-14} ${FR:-1}

@@ -5,7 +5,7 @@
  *
  * Copper bars on Timer B behind a 3D starfield, typewriter text, the
  * chrome logo dropping on the boom at bar 4, and an LED spectrum
- * analyser read back from the YM's own registers.
+ * analyser driven by the YM registers the music has set.
  *
  * Palette: 0 copper (raster), 1-3 stars by depth, 4-11 logo chrome,
  * 15 text and analyser (raster: a rainbow down the text, an LED

@@ -5,13 +5,13 @@
 # Cross-compiles with m68k-atari-mint-gcc via atarist-toolkit-docker:
 #   STCMD_NO_TTY=1 stcmd make
 #
-# dist/ is the whole disk: MEGADEMO.TOS plus the MEGA0-6.STM music
-# streams it loads. Copy the folder to a floppy, a hard disk or a
-# GEMDOS drive and run MEGADEMO.TOS.
+# dist/MEGADEMO.TOS is the whole demo, the music linked in: copy it
+# to a floppy, a hard disk or a GEMDOS drive and run it.
 #
-# The generated sources (src/gen/) and the music come from the Python
-# tools; they are rebuilt when a tool changes, inside the container or
-# out of it (pure Python, no packages).
+# The generated sources (src/gen/: the art, the song and its sync
+# table) come from the Python tools; they are rebuilt when a tool
+# changes, inside the container or out of it (pure Python, no
+# packages).
 
 CROSS   = m68k-atari-mint-
 CC      = $(CROSS)gcc
@@ -26,16 +26,15 @@ CFLAGS  = -O2 -fomit-frame-pointer -std=gnu99 -Wall -Wextra \
 
 SRCS = src/main.c src/core.c src/raster.c src/text.c src/dots.c \
        src/fast.c src/bobs.c src/intro.c src/plasma.c src/boing.c src/tunnel.c src/glenz.c \
-       src/meta.c src/outro.c src/gen/assets.c src/gen/song.c
+       src/meta.c src/outro.c src/gen/assets.c src/gen/song.c src/gen/stm.c
 OBJS = $(SRCS:src/%.c=build/%.o)
 
 TARGET = dist/MEGADEMO.TOS
-STMS   = $(foreach n,0 1 2 3 4 5 6,dist/MEGA$(n).STM)
 
 # Pinned: a rule above `all` would otherwise become the default goal
 .DEFAULT_GOAL := all
 
-all: $(TARGET) $(STMS)
+all: $(TARGET)
 
 # STDL's own sources, so a library edit or a submodule bump rebuilds
 # the archive (xpad comes through STDL's own submodule)
@@ -55,15 +54,15 @@ build/%.o: src/%.c | build
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 # generated sources: every object may include them
-$(OBJS): src/gen/assets.h src/gen/song.h
+$(OBJS): src/gen/assets.h src/gen/song.h src/gen/stm.h
 
 src/gen/assets.c src/gen/assets.h: build/assets.stamp
 build/assets.stamp: tools/mkassets.py | build
 	$(PYTHON) tools/mkassets.py
 	@touch $@
 
-src/gen/song.c src/gen/song.h $(STMS): build/song.stamp
-build/song.stamp: tools/mksong.py | build dist
+src/gen/song.c src/gen/song.h src/gen/stm.c src/gen/stm.h: build/song.stamp
+build/song.stamp: tools/mksong.py | build
 	$(PYTHON) tools/mksong.py
 	@touch $@
 
@@ -71,7 +70,7 @@ build dist:
 	mkdir -p $@
 
 clean:
-	rm -rf build $(TARGET) $(STMS)
+	rm -rf build $(TARGET)
 
 -include $(OBJS:.o=.d)
 

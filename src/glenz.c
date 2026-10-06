@@ -217,23 +217,13 @@ static void leave(void)
  * never cancels along it. A shared edge is always stepped from its
  * top vertex with the same slope, so both sides agree exactly.
  */
-/* (dx << 16) / dy in two hardware divides - libgcc's 32-bit divide
- * costs four times as much and the glenz wants 72 a frame */
-static int32_t slope(int x0, int y0, int x1, int y1)
+/* (dx << 16) / dy: two chained divu.w in STDL_FixDiv - libgcc's
+ * 32-bit divide costs four times as much and the glenz wants 72 a
+ * frame. Forced inline: a call costs more than the divide */
+static inline __attribute__((always_inline))
+int32_t slope(int x0, int y0, int x1, int y1)
 {
-    int dx = x1 - x0, dy = y1 - y0;
-    uint32_t a, hi, lo;
-
-    if (dy <= 0) {
-        return 0;
-    }
-    a = (uint32_t)(dx < 0 ? -dx : dx);
-    __asm__("divu.w %1,%0" : "+d"(a) : "d"((uint16_t)dy));
-    hi = a & 0xFFFF;
-    lo = a & 0xFFFF0000u;             /* remainder << 16 */
-    __asm__("divu.w %1,%0" : "+d"(lo) : "d"((uint16_t)dy));
-    a = (hi << 16) | (lo & 0xFFFF);
-    return dx < 0 ? -(int32_t)a : (int32_t)a;
+    return y1 > y0 ? STDL_FixDiv(x1 - x0, y1 - y0) : 0;
 }
 
 /* x (16.16, rounding folded in) where an edge crosses row r's

@@ -9,7 +9,7 @@ parts are cut to the beat:
 
 | Bars  | Part      | What's on screen                                                                                                                                                                                                                                      |
 | ----- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0-7   | Intro     | Timer B copper bars behind a 3D starfield, typewriter text in a raster rainbow, the chrome logo dropping on the boom, and an LED spectrum analyser read back from the YM's registers                                                                    |
+| 0-7   | Intro     | Timer B copper bars behind a 3D starfield, typewriter text in a raster rainbow, the chrome logo dropping on the boom, and an LED spectrum analyser driven by the YM registers the music sets                                                            |
 | 8-15  | Plasma    | A palette-cycled plasma boxed inside the ST's border, with coppers running through the side borders. On bar 12 the borders go: 273 lines of overscan, bobs flying through the old top border and a scroller in the old bottom one                   |
 | 16-23 | Boing     | The Amiga ball, spun by palette rotation, bouncing on every kick, with a one-bitplane shadow, orbiting vector bobs and hopping letters                                                                                                                 |
 | 24-31 | Tunnel    | A dot tunnel flying down a curving tube, then a 3D dot morph (sphere, torus, cube, STDL, helix) that explodes on the snare roll                                                                                                                       |
@@ -19,9 +19,9 @@ parts are cut to the beat:
 
 ## Running it
 
-Copy everything in `dist/` (`MEGADEMO.TOS` and `MEGA0.STM` to `MEGA6.STM`) to a
-floppy, a hard disk or a GEMDOS drive, and run `MEGADEMO.TOS`. It needs a colour
-monitor or TV at 50Hz and 1MB of memory.
+Copy `dist/MEGADEMO.TOS` to a floppy, a hard disk or a GEMDOS drive, and run it.
+The music is linked in, so it's the only file. It needs a colour monitor or TV at
+50Hz and 1MB of memory.
 
 | Key         | Action                     |
 | ----------- | -------------------------- |
@@ -58,8 +58,9 @@ packages, so they run in the container too:
   - **Voice B:** the lead and 50Hz chip-chord arpeggios.
   - **Voice C:** drums made of tone sweeps and noise.
 
-  The tool renders one register frame per VBL into `dist/MEGAn.STM` for
-  `STDL_Music`, plus `src/gen/song.*`, the per-row table every effect syncs to.
+  The tool renders one register frame per VBL into `src/gen/stm.*`, a
+  `STDL_Music` stream linked into the program, plus `src/gen/song.*`, the
+  per-row table every effect syncs to.
   `WAV=out.wav python3 tools/mksong.py` also writes a rough host-side render.
 
 `make` regenerates either output when its tool changes.
@@ -69,8 +70,13 @@ packages, so they run in the container too:
 **STDL does the platform.** That covers init and exit, double-buffered video and
 flipping, the overscan (`STDL_OpenTopBorder` + `STDL_OpenBottomBorder` give the
 273-line screen in the plasma part, with the bottom border calibrated behind a
-black screen while the loader runs), the YM music replay (`STDL_Music`), the VBL
-callback, events and keys, and the palette word format. It also does the drawing
+black screen while the loader runs), the Timer B rasters (`STDL_OpenRasters`,
+colour 0 plus colour 15 or 8 every 2 or 4 lines, with a prefix on TOS's Timer C
+so its 200Hz tick can't shake the bars), the YM music replay (`STDL_Music`: the
+song is played from memory, a part jump is `STDL_SeekMusic`, and the analyser
+reads `STDL_GetMusicRegisters`), the VBL callback, events and keys, the palette
+word format, and the multiply and divide helpers that keep gcc away from
+libgcc's (`STDL_MulS16`, `STDL_FixDiv`). It also does the drawing
 work where its general routines fit: fills, the logo and Boing-ball blits
 (`STDL_BlitSurface`, `STDL_BlitSprite` with pre-shifting on a plain ST),
 `STDL_DrawChar`, the dirty-rectangle restore, and loading art from chunky bytes
@@ -81,9 +87,6 @@ general-purpose paths (clip, mask upkeep, plane budget, colour dispatch on every
 call) cost more in set-up than the pixels do. These loops are 68000 assembly,
 inline in the C files:
 
-- **Timer B rasters** (`raster.c`): colour 0 plus colour 15 or 8, every 2 or 4
-  lines. A prefix on TOS's Timer C vector lowers the CPU mask so the 200Hz tick
-  can't shake the bars, which is the same trick STDL's overscan module uses.
 - **Starfield, tunnel rings and dot morph** (`intro.c`, `tunnel.c`): project,
   clip and plot in one loop, about a third of the cost of `STDL_PointsC` for
   dots on a screen the demo owns.
@@ -97,8 +100,9 @@ inline in the C files:
   `text.c`/`fast.c`): pre-shifted or pre-drawn data copied with `movem` and
   long moves.
 
-Everything runs on the song's clock. A VBL callback counts the frame the YM is
-playing, so a part that renders at 25fps still lands every flash on its drum.
+Everything runs on the song's clock: the frame the YM is playing, from
+`STDL_MusicFrame`. A part that renders at 25fps still lands every flash on its
+drum.
 The frame rate is adaptive: each frame measures its own cost, and the flip
 holds the steadiest rate the machine sustains.
 
@@ -118,7 +122,7 @@ plain ST:
 | Metaballs         | 25                   | 25-50           |
 | Outro             | 25                   | 50              |
 
-The loader takes about 8.7 seconds on a plain ST and 4 on a Mega STE.
+The loader takes about 7.9 seconds on a plain ST and 4 on a Mega STE.
 
 These figures are emulator-only so far. Nothing has run on real hardware yet.
 
@@ -140,17 +144,17 @@ It needs an EmuTOS image in `tmp/tos/etos256uk.img`, or any image passed as `TOS
 ```
 src/
   main.c       boot, loader, title, the part sequencer, adaptive frame pacing
-  core.c       VBL service: song clock, staged palette; colour tables, YM read-back
-  raster.c     Timer B rasters and the Timer C prefix
+  core.c       VBL service, song clock and seek, staged palette; colour tables
+  raster.c     the demo's names for STDL's rasters; the table shown with the flip
   text.c       fonts, 1bpp scroller bands
   fast.c       the shared 68000 loops: span fills, clears, band output, glyphs
   bobs.c       pre-shifted 16x16 bobs with restore
   dots.c       dot erase
   intro.c plasma.c boing.c tunnel.c glenz.c meta.c outro.c   the parts
-  gen/         generated by tools/ (assets, song sync table)
+  gen/         generated by tools/ (assets, the song and its sync table)
 tools/
   mkassets.py  font, logo, ball, bob, sine
-  mksong.py    the YM soundtrack and sync table
+  mksong.py    the YM soundtrack and its sync table
   hatari/      test and profiling scripts
 ```
 

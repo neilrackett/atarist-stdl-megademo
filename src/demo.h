@@ -40,12 +40,12 @@ static inline uint8_t *scr_row(int y)
 
 /*
  * The clock everything runs on: the song frame (0..SONG_FRAMES-1)
- * the YM is playing, counted by a VBL callback beside STDL_Music's
- * own tick. A part that renders at 25fps still sees the song move
- * at 50Hz, so it lands on the beat whatever it costs.
+ * the YM is playing, read from the music itself (STDL_MusicFrame).
+ * A part that renders at 25fps still sees the song move at 50Hz, so
+ * it lands on the beat whatever it costs.
  */
 uint32_t sync_frame(void);
-int      sync_start(int part);      /* load MEGAn.STM, play from part n */
+int      sync_start(int part);      /* seek the song to part n, play  */
 void     sync_pause(int on);
 int      sync_paused(void);
 void     sync_stop(void);
@@ -55,7 +55,8 @@ static inline uint16_t sync_flags(uint32_t f)
 {
     return song_flags[(f / SONG_FPR) % SONG_ROWS];
 }
-/* the YM read back: volume 0-15 per voice (16 = envelope) and period */
+/* the YM registers as the music last set them: volume 0-15 per voice
+ * (16 = envelope) and period */
 void ym_peek(uint8_t vol[3], uint16_t per[3], uint8_t *mixer);
 
 /* decaying 0..256 envelope from a frame count */
@@ -109,11 +110,11 @@ extern int fx_fade;             /* 0..256 brightness, 256 = normal    */
 /* ------------------------------------------------------------- rasters */
 
 /*
- * Timer B rasters: colour 0 (background, side borders) and colour 15
- * change every `step` displayed lines from a table the program fills
- * each frame. Two words an entry: colour 0, colour 15. Native code:
- * STDL keeps no per-line interrupt of its own, and Timer B is free
- * whenever no border is open - never use both at once.
+ * Timer B rasters (STDL_OpenRasters underneath): colour 0 (background,
+ * side borders) and colour 15 change every `step` displayed lines from
+ * a table the program fills each frame. Two words an entry: colour 0,
+ * colour 15 (or 8; raster_on2 with 0 is colour 0 alone, one word an
+ * entry). Never open with a border open: STDL refuses.
  */
 #define RAST_MAXN 201
 int       raster_on(int step);
@@ -151,24 +152,16 @@ void band_clear(STDL_Surface *s, int y, int h);
 
 #define SIN(a) ((int)sintab[(a) & 1023])
 #define COS(a) ((int)sintab[((a) + 256) & 1023])
-/*
- * 16x16->32 multiply. gcc 4.6 only finds muls.w for itself when one
- * side is a constant: (int32_t)(int16_t)a * (int16_t)b with both
- * variable still compiles to a __mulsi3 call, about four times the
- * cost, and that was hiding in every loop here that multiplied two
- * variables. So it is asm.
- */
-static inline int32_t mul16(int a, int b)
-{
-    int32_t r = (int16_t)a;
-    __asm__("muls.w %1,%0" : "+d"(r) : "d"((int16_t)b));
-    return r;
-}
-#define MUL16(a, b) mul16((a), (b))
+/* 16x16->32 multiply and the like from stdl_math.h: inline asm, since
+ * gcc 4.6 calls __mulsi3 for (int16_t)a * (int16_t)b whenever an
+ * operand comes from a loop counter or the widths differ */
+#include <stdl/stdl_math.h>
+#define MUL16(a, b) STDL_MulS16((a), (b))
+#define mul16(a, b) STDL_MulS16((a), (b))
 /* (a * b) >> 14 with a 16-bit multiply */
 static inline int mul14(int a, int b)
 {
-    return (int)(mul16(a, b) >> 14);
+    return (int)(STDL_MulS16(a, b) >> 14);
 }
 uint16_t rnd(void);
 
