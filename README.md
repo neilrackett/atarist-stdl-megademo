@@ -1,21 +1,25 @@
 # STDL Megademo
 
-*(working title)*
+<img src="montage.png" alt="STDL Megademo montage" width="864" />
+
+A tribute the 80s/90s Atari ST demoscene, by [Neil Rackett](https://neilrackett.com/atarist)
+
+## Introduction
 
 A real Atari ST megademo built on [STDL](https://github.com/neilrackett/atarist-stdl),
 the planar-native SDL subset for the ST. It runs on a plain 8MHz 520/1040 ST with
 1MB, and on an STE or Mega STE. It plays a 107-second YM2149 soundtrack, and seven
 parts are cut to the beat:
 
-| Bars  | Part      | What's on screen                                                                                                                                                                                                                                      |
-| ----- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0-7   | Intro     | Timer B copper bars behind a 3D starfield, typewriter text in a raster rainbow, the chrome logo dropping on the boom, and an LED spectrum analyser driven by the YM registers the music sets                                                            |
-| 8-15  | Plasma    | A palette-cycled plasma boxed inside the ST's border, with coppers running through the side borders. On bar 12 the borders go: 273 lines of overscan, bobs flying through the old top border and a scroller in the old bottom one                   |
-| 16-23 | Boing     | The Amiga ball, spun by palette rotation, bouncing on every kick, with a one-bitplane shadow, orbiting vector bobs and hopping letters                                                                                                                 |
-| 24-31 | Tunnel    | A dot tunnel flying down a curving tube, then a 3D dot morph (sphere, torus, cube, STDL, helix) that explodes on the snare roll                                                                                                                       |
-| 32-39 | Glenz     | Glenz vectors: a checkered tetrakis hexahedron of see-through glass, with twisters on either side and a Timer B sky                                                                                                                                    |
-| 40-47 | Metaballs | Blobs summed by a bitplane adder into chrome over coppers, with a word shouted on every clap. The acid line is on                                                                                                                                      |
-| 48-55 | Outro     | Kefrens bars over coppers, greetings, thanks, and a fade back to the top                                                                                                                                                                              |
+| Bars  | Part      | What's on screen                                                                                                                                                                                                                  |
+| ----- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0-7   | Intro     | Timer B copper bars behind a 3D starfield, typewriter text in a raster rainbow, the chrome logo dropping on the boom, and an LED spectrum analyser driven by the YM registers the music sets                                      |
+| 8-15  | Plasma    | A palette-cycled plasma boxed inside the ST's border, with coppers running through the side borders. On bar 12 the borders go: 273 lines of overscan, bobs flying through the old top border and a scroller in the old bottom one |
+| 16-23 | Boing     | The Amiga ball, spun by palette rotation, bouncing on every kick, with a one-bitplane shadow, orbiting vector bobs and hopping letters                                                                                            |
+| 24-31 | Tunnel    | A dot tunnel flying down a curving tube, then a 3D dot morph (sphere, torus, cube, STDL, helix) that explodes on the snare roll                                                                                                   |
+| 32-39 | Glenz     | Glenz vectors: a checkered tetrakis hexahedron of see-through glass, with twisters on either side and a Timer B sky                                                                                                               |
+| 40-47 | Metaballs | Blobs summed by a bitplane adder into chrome over coppers, with a word shouted on every clap. The acid line is on                                                                                                                 |
+| 48-55 | Outro     | Kefrens bars over coppers, greetings, thanks, and a fade back to the top                                                                                                                                                          |
 
 ## Running it
 
@@ -23,12 +27,12 @@ Copy `dist/MEGADEMO.TOS` to a floppy, a hard disk or a GEMDOS drive, and run it.
 The music is linked in, so it's the only file. It needs a colour monitor or TV at
 50Hz and 1MB of memory.
 
-| Key         | Action                     |
-| ----------- | -------------------------- |
+| Key         | Action                                    |
+| ----------- | ----------------------------------------- |
 | Space       | Start (on the title), then pause / resume |
-| 1-7         | Jump to a part             |
-| Left, Right | Previous / next part       |
-| Esc         | Quit                       |
+| 1-7         | Jump to a part                            |
+| Left, Right | Previous / next part                      |
+| Esc         | Quit                                      |
 
 In Hatari: `hatari --machine st --tos <a TOS or EmuTOS image> dist/MEGADEMO.TOS`.
 
@@ -111,16 +115,16 @@ holds the steadiest rate the machine sustains.
 Measured in Hatari (cycle-exact) with EmuTOS, and the same under TOS 1.04 on the
 plain ST:
 
-| Part              | Plain ST / STE, 8MHz | Mega STE, 16MHz |
-| ----------------- | -------------------- | --------------- |
-| Intro             | 50                   | 50              |
-| Plasma, boxed     | 50                   | 50              |
-| Plasma, overscan  | 25                   | 25              |
-| Boing             | 25                   | 50              |
-| Tunnel / morph    | 50 / 25              | 50 / 50         |
-| Glenz             | 16.7                 | 25              |
-| Metaballs         | 25                   | 25-50           |
-| Outro             | 25                   | 50              |
+| Part             | Plain ST / STE, 8MHz | Mega STE, 16MHz |
+| ---------------- | -------------------- | --------------- |
+| Intro            | 50                   | 50              |
+| Plasma, boxed    | 50                   | 50              |
+| Plasma, overscan | 25                   | 25              |
+| Boing            | 25                   | 50              |
+| Tunnel / morph   | 50 / 25              | 50 / 50         |
+| Glenz            | 16.7                 | 25              |
+| Metaballs        | 25                   | 25-50           |
+| Outro            | 25                   | 50              |
 
 The loader takes about 7.9 seconds on a plain ST and 4 on a Mega STE.
 
