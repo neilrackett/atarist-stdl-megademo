@@ -304,7 +304,7 @@ static void enter_part(int p)
     pal_black();
     scr = STDL_GetVideoSurface();
     pace = 1;
-    calm = 0;
+    calm = over = worst = 0;    /* the last part's overruns are not this one's */
     parts[cur]->enter();
     fx_flash = 256;
 }
